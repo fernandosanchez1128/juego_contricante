@@ -1,0 +1,250 @@
+using System.IO;
+using System;
+
+public class Node
+{
+	public double probability; //probabilidad de acertar el golpe
+	public Node [] children;   //hijos del nodo
+	public int IAlife;         //vida que tendia la IA en ese momento 
+	public int PLife ;         //vida que tendria el jugador en ese momento 
+	public string hit ;        // tipo de golpe
+	public string type;        //tipo de nodo: min, max o bolita (usado para algoritmo probabilisticos) 
+	public double val_heuristica =0;
+	/**
+	*constructor de la clase
+	**/
+	public Node (Node [] hijos,string tipo="max", double probabilidad =1.0, int vidaIA=100,int vida_jugador=100,string golpe ="")
+	{
+	    probability = probabilidad;
+	    children = hijos;
+	    IAlife = vidaIA;
+	    PLife = vida_jugador;
+	    hit = golpe;
+	    type = tipo;
+	}
+	
+	public  Node ()
+	{
+	    
+	}
+	/**
+	*Metodo usado para la creacion de arbol al cual se le 
+    *aplicará el algoritmo minimax
+	**/
+	public static void crear_arbol (Node padre, int profundidad)
+	{
+		if (profundidad > 0)
+		{
+			Node [] hijos = padre.children;
+			string type;
+			
+			if (profundidad % 2 == 0)
+			{
+				type = "max";
+			}
+			else 
+			{
+				type = "min";
+			}
+			for (int a  =0; a<hijos.Length;a++)
+			{
+				
+				if (hijos[a].type == "bolita")
+				{
+					Node nodo = hijos[a];
+					string golpe = nodo.hit;
+					int vidaIA = nodo.IAlife;
+					int vida_jugador = nodo.PLife;
+					Node [] no_hijos = {};
+					if (type == "min")
+					{
+					    Console.WriteLine("MIN");
+						if (golpe == "flecha")
+						{
+						    //Console.WriteLine(type);
+							Node hijo1 = new Node (no_hijos,type,0.5, vidaIA, vida_jugador -20);
+							Node hijo2 = new Node (no_hijos,type,0.2, vidaIA, vida_jugador);
+							Node hijo3 = new Node (no_hijos,type,0.3, vidaIA, vida_jugador - 40);
+							Node [] newHijos ={ hijo1,hijo2,hijo3};
+							nodo.children = newHijos;
+						}
+						
+						else
+						{
+						    //Console.WriteLine(type);
+							Node hijo1 = new Node (no_hijos,type,0.7, vidaIA, vida_jugador -20);
+							Node hijo2 = new Node (no_hijos,type,0.1, vidaIA, vida_jugador);
+							Node hijo3 = new Node (no_hijos,type,0.2, vidaIA, vida_jugador - 40);
+							Node [] newHijos ={ hijo1,hijo2,hijo3};
+							nodo.children = newHijos;
+						}
+						
+					}
+					else
+					{
+					    Console.WriteLine("MAXIMO");
+						if (golpe == "flecha")
+						{
+							Node hijo1 = new Node (no_hijos,type,0.5, vidaIA - 20, vida_jugador);
+							Node hijo2 = new Node (no_hijos,type,0.2, vidaIA, vida_jugador);
+							Node hijo3 = new Node (no_hijos,type,0.3, vidaIA - 40 , vida_jugador);
+							Node [] newHijos ={ hijo1,hijo2,hijo3};
+							nodo.children = newHijos;
+						}
+						
+						else
+						{
+							Node hijo1 = new Node (no_hijos,type,0.7, vidaIA - 20 , vida_jugador);
+							Node hijo2 = new Node (no_hijos,type,0.1, vidaIA, vida_jugador);
+							Node hijo3 = new Node (no_hijos,type,0.2, vidaIA - 40, vida_jugador);
+							Node [] newHijos ={ hijo1,hijo2,hijo3};
+							nodo.children = newHijos;
+						}
+					}
+					crear_arbol (nodo,profundidad);
+				}
+				else
+				{
+				    Console.WriteLine("CREANDO BOLITA");
+					Node nodo = hijos[a];
+					
+					Node hijo1 = new Node(nodo.children,nodo.type,nodo.probability,nodo.IAlife,nodo.PLife,nodo.hit) ;
+					Node hijo2 = new Node(nodo.children,nodo.type,nodo.probability,nodo.IAlife,nodo.PLife,nodo.hit) ;
+					hijo1.hit = "flecha";
+					hijo2.hit = "hacha";
+					hijo1.type = "bolita";
+					hijo2.type = "bolita";
+					Node [] newHijos = {hijo1,hijo2};
+					nodo.children = newHijos;
+					crear_arbol (nodo,profundidad-1);
+				}
+				
+			}
+		}
+	}
+	
+	public static void ver_arbol (Node raiz,int prof)
+	{
+	    if (prof>=0)
+	    {
+	        Console.WriteLine(raiz.type,prof);
+	        Node [] hijos = raiz.children;
+	        for (int a  =0; a<hijos.Length;a++)
+	        {
+	            Console.WriteLine(hijos[a].type,prof);
+	            if (hijos[a].type == "bolita")
+	            {
+	                ver_arbol (hijos[a],prof-1);
+	            }
+	            else
+	            {
+	                ver_arbol (hijos[a],prof);
+	            }
+	        }
+	    }
+	}
+	
+	/**
+	*funcion utilizada para calcular la utilidad de un nodo
+	**/
+	public static double heuristica (Node nodo)
+	{
+    	if (nodo.IAlife <= 0)
+    	{
+    		return -1000.0;
+    	}
+    	if (nodo.PLife <= 0)
+    	{
+    	    return 1000.0;
+    	}
+    		
+    	else
+    	{
+    		double DamageMade = 100-nodo.PLife;
+    		double DamageGotten = 100-nodo.IAlife;
+    		return DamageMade - DamageGotten;
+    	}
+	}
+	
+	/**
+	* implementacion del algortimo minimax
+	**/
+	
+    public static double  minimax(Node node, int depth)
+    {
+        if (depth == 0)
+        {
+            return heuristica (node);
+        }
+    	if (node.type == "bolita")
+    	{
+    			double sum = 0.0;
+    			for (int i =0 ; i<node.children.Length; i++)
+    			{
+    			    Node child = node.children[i];
+    				sum+= minimax(child, depth)*child.probability;
+    			}
+    			node.val_heuristica = sum;
+    			return sum;
+    	}
+    	if (node.type == "max")
+    	{
+    	    double bestValue = -1000.0;
+    	    for (int i =0 ; i<node.children.Length; i++)
+    		{
+    		    Node child = node.children[i];
+    	        double val =  minimax(child, depth - 1);
+    	        bestValue = Math.Max(bestValue, val);
+    		}
+    	    return bestValue;
+    	}
+    	if (node.type == "min")
+    	{
+    	    double bestValue = 1000.0;
+    	    for (int i =0 ; i<node.children.Length; i++)
+    		{
+    		    Node child = node.children[i];
+    	        double val = minimax(child, depth - 1);
+    	        bestValue = Math.Min(bestValue, val);
+    		}
+    	    return bestValue;
+    	}
+    	return 0;
+    }
+	/**
+	*Metodo principal se crea el nodo raiz y sus dos primeros
+	*hijos y se llama el metodo para la creacion del arbol
+	**/
+    static void Main()
+    {
+        //Console.WriteLine("Hello, World!");
+        //creacion del arbol
+        
+        Node []  no_hijos = {};
+        Node hijo1 = new Node(no_hijos);
+        Node hijo2 = new Node(no_hijos);
+        hijo1.type="bolita";
+        hijo2.type="bolita";
+        hijo1.hit = "hacha";
+        hijo2.hit = "flecha";
+        Node [] hijos = {hijo1,hijo2};
+        
+        Node raiz = new Node (hijos);
+        raiz.PLife = 20;
+        hijo1.PLife  = 20;
+        hijo2.PLife  = 20;
+        crear_arbol (raiz,3);
+            Node hijo_nieto = hijo1.children[0].children[0].children[0].children[0];
+        Console.WriteLine(hijo_nieto.children.Length);
+        for (int a  =0 ; a<hijo_nieto.children.Length ; a++)
+        {
+            Console.WriteLine(hijo_nieto.children[a].PLife);
+        }
+        //ver_arbol (raiz,3);
+        double  resultado = minimax (raiz,4);
+        Console.WriteLine("resultado");
+        Console.WriteLine(resultado);
+        Console.WriteLine(hijo1.val_heuristica);
+        Console.WriteLine(hijo2.val_heuristica);
+    }
+}
